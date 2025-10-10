@@ -149,40 +149,37 @@ func (h *QdrantToolHandler) handleQdrantFind(args map[string]interface{}) (*mcp.
 		return createErrorResult(fmt.Sprintf("search failed: %s", err.Error())), nil, nil
 	}
 
-	if len(results) == 0 {
-		// Return empty JSON array for UI compatibility
-		emptyArrayJSON, _ := json.Marshal([]interface{}{})
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: string(emptyArrayJSON)},
-			},
-		}, results, nil
+	// Convert results to JSON array for UI compatibility
+	type KnowledgeEntry struct {
+		ID         string                 `json:"id"`
+		Collection string                 `json:"collection"`
+		Text       string                 `json:"text"`
+		Metadata   map[string]interface{} `json:"metadata"`
+		CreatedAt  string                 `json:"createdAt"`
+		Score      float64                `json:"score"`
 	}
 
-	// Format results
-	resultText := fmt.Sprintf("Found %d results:\n\n", len(results))
+	entries := make([]KnowledgeEntry, len(results))
 	for i, result := range results {
-		resultText += fmt.Sprintf("Result %d (Score: %.2f)\n", i+1, result.Score)
-
-		// Show first 200 chars of text
-		text := result.Entry.Text
-		if len(text) > 200 {
-			text = text[:200] + "..."
+		entries[i] = KnowledgeEntry{
+			ID:         result.Entry.ID,
+			Collection: result.Entry.Collection,
+			Text:       result.Entry.Text,
+			Metadata:   result.Entry.Metadata,
+			CreatedAt:  result.Entry.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			Score:      result.Score,
 		}
-		resultText += fmt.Sprintf("Text: %s\n", text)
+	}
 
-		// Show metadata if present
-		if len(result.Entry.Metadata) > 0 {
-			metadataJSON, _ := json.MarshalIndent(result.Entry.Metadata, "", "  ")
-			resultText += fmt.Sprintf("Metadata: %s\n", string(metadataJSON))
-		}
-
-		resultText += "\n---\n\n"
+	// Return JSON array for UI consumption
+	jsonData, err := json.Marshal(entries)
+	if err != nil {
+		return createErrorResult(fmt.Sprintf("failed to marshal results: %s", err.Error())), nil, nil
 	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
-			&mcp.TextContent{Text: resultText},
+			&mcp.TextContent{Text: string(jsonData)},
 		},
 	}, results, nil
 }

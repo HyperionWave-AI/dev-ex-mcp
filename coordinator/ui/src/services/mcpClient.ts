@@ -329,33 +329,39 @@ class MCPCoordinatorClient {
     query: string;
     limit?: number;
   }): Promise<KnowledgeEntry[]> {
+    console.log('[mcpClient.queryKnowledge] Called with:', params);
     try {
+      console.log('[mcpClient.queryKnowledge] Calling qdrant_find tool...');
       const result = await this.callTool('qdrant_find', {
         collectionName: params.collection,
         query: params.query,
         limit: params.limit || 5
       });
 
+      console.log('[mcpClient.queryKnowledge] Raw result:', JSON.stringify(result, null, 2));
+
       // MCP server now returns JSON array directly in text content
       if (result.content && result.content[0] && result.content[0].text) {
         const jsonText = result.content[0].text;
+        console.log('[mcpClient.queryKnowledge] Extracted text (first 200 chars):', jsonText.substring(0, 200));
 
         try {
           const entries = JSON.parse(jsonText) as KnowledgeEntry[];
-          console.log('[mcpClient] Knowledge query result:', entries.length, 'entries');
-          console.log('[mcpClient] First entry sample:', entries[0]);
+          console.log('[mcpClient.queryKnowledge] Successfully parsed:', entries.length, 'entries');
+          console.log('[mcpClient.queryKnowledge] First entry sample:', entries[0]);
           return entries;
         } catch (parseError) {
-          console.error('[mcpClient] Failed to parse knowledge query JSON:', parseError);
-          console.error('[mcpClient] Raw response:', jsonText);
+          console.error('[mcpClient.queryKnowledge] Failed to parse knowledge query JSON:', parseError);
+          console.error('[mcpClient.queryKnowledge] Raw response:', jsonText);
           return [];
         }
       }
 
-      console.log('[mcpClient] No knowledge entries found in response');
+      console.warn('[mcpClient.queryKnowledge] No knowledge entries found in response - unexpected format');
+      console.warn('[mcpClient.queryKnowledge] Result structure:', result);
       return [];
     } catch (error) {
-      console.error('Failed to query knowledge:', error);
+      console.error('[mcpClient.queryKnowledge] Failed to query knowledge:', error);
       throw error;
     }
   }

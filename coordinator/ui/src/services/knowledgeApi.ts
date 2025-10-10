@@ -31,7 +31,41 @@ export const knowledgeApi = {
       query: request.query,
       limit: String(request.limit || 10)
     });
-    return fetchWithAuth(`${API_BASE}/api/knowledge/search?${params}`);
+
+    const apiUrl = `${API_BASE}/api/knowledge/search?${params}`;
+    console.log('[knowledgeApi] API Call:', apiUrl);
+    console.log('[knowledgeApi] Request:', request);
+
+    // Fetch raw MCP response
+    const mcpResponse = await fetchWithAuth(apiUrl);
+    console.log('[knowledgeApi] Raw MCP Response:', JSON.stringify(mcpResponse, null, 2));
+
+    // Transform MCP format to expected SearchResponse format
+    // MCP returns: {content: [{text: "[...JSON array...]", type: "text"}]}
+    // We need: {results: KnowledgeEntry[], total: number}
+
+    if (!mcpResponse.content || !mcpResponse.content[0] || !mcpResponse.content[0].text) {
+      console.warn('[knowledgeApi] Invalid MCP response structure:', mcpResponse);
+      return { results: [], total: 0 };
+    }
+
+    try {
+      // Parse the JSON string within content[0].text
+      console.log('[knowledgeApi] Parsing content[0].text:', mcpResponse.content[0].text.substring(0, 200));
+      const results = JSON.parse(mcpResponse.content[0].text);
+      console.log('[knowledgeApi] Parsed results:', results);
+
+      const response = {
+        results: Array.isArray(results) ? results : [],
+        total: Array.isArray(results) ? results.length : 0
+      };
+      console.log('[knowledgeApi] Final SearchResponse:', response);
+      return response;
+    } catch (error) {
+      console.error('[knowledgeApi] Failed to parse MCP search response:', error);
+      console.error('[knowledgeApi] Raw text was:', mcpResponse.content[0].text);
+      return { results: [], total: 0 };
+    }
   },
 
   async createKnowledge(request: CreateRequest): Promise<CreateResponse> {

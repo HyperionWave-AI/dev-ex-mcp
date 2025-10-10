@@ -77,8 +77,14 @@ export const KnowledgeSearch: React.FC = () => {
   const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
+    console.log('[KnowledgeSearch] handleSearch called');
+    console.log('[KnowledgeSearch] selectedCollection:', selectedCollection);
+    console.log('[KnowledgeSearch] query:', query.trim());
+    console.log('[KnowledgeSearch] filters.limit:', filters.limit);
+
     if (!selectedCollection || !query.trim()) {
       setError('Please select a collection and enter a search query');
+      console.warn('[KnowledgeSearch] Validation failed - missing collection or query');
       return;
     }
 
@@ -86,22 +92,30 @@ export const KnowledgeSearch: React.FC = () => {
     setError(null);
 
     try {
+      console.log('[KnowledgeSearch] Calling knowledgeApi.searchKnowledge...');
       const response = await knowledgeApi.searchKnowledge({
         collection: selectedCollection,
         query: query.trim(),
         limit: filters.limit,
       });
 
+      console.log('[KnowledgeSearch] Response received:', response);
+      console.log('[KnowledgeSearch] response.results:', response.results);
+      console.log('[KnowledgeSearch] response.results.length:', response.results?.length);
+
       setResults(response.results);
+      console.log('[KnowledgeSearch] setResults called with', response.results.length, 'results');
 
       // Save to recent searches
       saveRecentSearch(query.trim());
       setRecentSearches(loadRecentSearches());
     } catch (err) {
+      console.error('[KnowledgeSearch] Search error:', err);
       setError(err instanceof Error ? err.message : 'Search failed');
       setResults([]);
     } finally {
       setLoading(false);
+      console.log('[KnowledgeSearch] Search complete');
     }
   };
 

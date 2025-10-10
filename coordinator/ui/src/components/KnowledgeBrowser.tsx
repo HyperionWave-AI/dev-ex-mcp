@@ -53,7 +53,14 @@ export const KnowledgeBrowser: React.FC = () => {
   }, []);
 
   const handleSearch = async () => {
-    if (!query.trim()) return;
+    console.log('[KnowledgeBrowser.handleSearch] Starting search');
+    console.log('[KnowledgeBrowser.handleSearch] Query:', query);
+    console.log('[KnowledgeBrowser.handleSearch] Collection:', collection);
+
+    if (!query.trim()) {
+      console.warn('[KnowledgeBrowser.handleSearch] Empty query, aborting');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -62,6 +69,7 @@ export const KnowledgeBrowser: React.FC = () => {
       let allEntries: KnowledgeEntry[] = [];
 
       if (collection === 'All Collections' || !collection) {
+        console.log('[KnowledgeBrowser.handleSearch] Searching all collections');
         // Search all major collections and aggregate results
         // Note: task:hyperion://... collections are per-task, too many to query individually
         const collectionsToSearch = [
@@ -87,25 +95,34 @@ export const KnowledgeBrowser: React.FC = () => {
         });
 
         const results = await Promise.all(searchPromises);
+        console.log('[KnowledgeBrowser.handleSearch] Individual results:', results.map(r => r.length));
         allEntries = results.flat();
+        console.log('[KnowledgeBrowser.handleSearch] Total entries before sorting:', allEntries.length);
 
         // Sort by score (highest first)
         allEntries.sort((a, b) => (b.score || 0) - (a.score || 0));
 
         // Limit total results
         allEntries = allEntries.slice(0, 20);
+        console.log('[KnowledgeBrowser.handleSearch] Final entries after limiting:', allEntries.length);
       } else {
+        console.log('[KnowledgeBrowser.handleSearch] Searching single collection:', collection);
         // Search single collection
         allEntries = await mcpClient.queryKnowledge({
           collection,
           query,
           limit: 20,
         });
+        console.log('[KnowledgeBrowser.handleSearch] Single collection results:', allEntries.length);
       }
 
+      console.log('[KnowledgeBrowser.handleSearch] Setting results:', allEntries.length, 'entries');
+      console.log('[KnowledgeBrowser.handleSearch] First entry:', allEntries[0]);
       setResults(allEntries);
       setLastSearch({ query, collection: collection || 'All Collections' });
+      console.log('[KnowledgeBrowser.handleSearch] Search complete!');
     } catch (err) {
+      console.error('[KnowledgeBrowser.handleSearch] Search error:', err);
       setError(err instanceof Error ? err.message : 'Search failed');
       console.error('Search error:', err);
     } finally {
