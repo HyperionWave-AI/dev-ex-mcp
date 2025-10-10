@@ -11,7 +11,7 @@
 
 const http = require('http');
 
-const MCP_BRIDGE_URL = 'http://localhost:5173';
+const MCP_BRIDGE_URL = 'http://localhost:7779';
 let requestId = 0;
 
 // Call MCP tool via HTTP bridge
@@ -24,7 +24,7 @@ async function callMCPTool(toolName, args) {
 
     const options = {
       hostname: 'localhost',
-      port: 5173,
+      port: 7779,
       path: '/api/mcp/tools/call',
       method: 'POST',
       headers: {
@@ -75,10 +75,13 @@ async function getKnowledgeEntries() {
   }
 }
 
-// Migrate single entry to Qdrant
-async function migrateEntry(entry) {
+// Migrate single entry to Qdrant with retry logic
+async function migrateEntry(entry, retryCount = 0) {
+  const maxRetries = 3;
+  const baseDelay = 2000; // 2 seconds base delay
+
   try {
-    console.log(`Migrating: ${entry.collection} - ${entry.entryId}`);
+    console.log(`Migrating: ${entry.collection} - ${entry.entryId} (attempt ${retryCount + 1}/${maxRetries + 1})`);
 
     const result = await callMCPTool('qdrant_store', {
       collectionName: entry.collection,
@@ -89,6 +92,14 @@ async function migrateEntry(entry) {
     console.log(`✓ Migrated: ${entry.entryId}`);
     return { success: true, entryId: entry.entryId };
   } catch (error) {
+    // Retry with exponential backoff for socket hang up errors
+    if (error.message.includes('socket hang up') && retryCount < maxRetries) {
+      const delay = baseDelay * Math.pow(2, retryCount); // 2s, 4s, 8s
+      console.log(`⚠ Retry after ${delay}ms: ${entry.entryId}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return migrateEntry(entry, retryCount + 1);
+    }
+
     console.error(`✗ Failed: ${entry.entryId} - ${error.message}`);
     return { success: false, entryId: entry.entryId, error: error.message };
   }
@@ -108,21 +119,23 @@ async function migrateAll() {
     }
 
     console.log(`\nStarting migration of ${entries.length} entries...\n`);
+    console.log(`⚠ Using SEQUENTIAL processing to avoid OpenAI rate limits\n`);
 
-    // Migrate in batches to avoid overwhelming the system
-    const batchSize = 10;
+    // Migrate SEQUENTIALLY (no parallel batches) to respect OpenAI rate limits
     const results = [];
+    const delayBetweenEntries = 2000; // 2 seconds delay between each entry
 
-    for (let i = 0; i < entries.length; i += batchSize) {
-      const batch = entries.slice(i, i + batchSize);
-      console.log(`\nBatch ${Math.floor(i/batchSize) + 1}/${Math.ceil(entries.length/batchSize)} (${batch.length} entries)`);
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      console.log(`\n[${i + 1}/${entries.length}] Migrating: ${entry.collection} - ${entry.entryId}`);
 
-      const batchResults = await Promise.all(batch.map(migrateEntry));
-      results.push(...batchResults);
+      const result = await migrateEntry(entry);
+      results.push(result);
 
-      // Wait 1 second between batches
-      if (i + batchSize < entries.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait 2 seconds between entries to avoid rate limits
+      if (i < entries.length - 1) {
+        console.log(`Waiting ${delayBetweenEntries / 1000}s before next entry...`);
+        await new Promise(resolve => setTimeout(resolve, delayBetweenEntries));
       }
     }
 
