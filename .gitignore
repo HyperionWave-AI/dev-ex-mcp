@@ -9,3 +9,5 @@
 
 .env
 coordinator/mcp-http-bridge/hyperion-coordinator-bridge
+start-dev-squad.bat
+WINDOWS_SETUP.md
