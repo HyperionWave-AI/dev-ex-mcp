@@ -1,11 +1,11 @@
 root = "."
 testdata_dir = "testdata"
-tmp_dir = "/tmp/bridge-build"
+tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "/tmp/bridge-build/main"
-  cmd = "go build -o /tmp/bridge-build/main ."
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ."
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "mcp-server", "mcp-server-src"]
   exclude_file = []

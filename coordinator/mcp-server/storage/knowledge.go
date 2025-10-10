@@ -140,14 +140,11 @@ func (s *MongoKnowledgeStorage) Query(collection, query string, limit int) ([]*Q
 					Score: r.Score,
 				}
 			}
-			fmt.Printf("✓ Qdrant vector search: Found %d results for query '%s' in collection '%s'\n", len(results), query, collection)
 			return queryResults, nil
 		}
 		// Log error but continue to MongoDB fallback
 		if err != nil {
-			fmt.Printf("⚠ Qdrant search failed, falling back to MongoDB text search: %v\n", err)
-		} else {
-			fmt.Printf("⚠ Qdrant returned 0 results for query '%s' in collection '%s', falling back to MongoDB text search\n", query, collection)
+			fmt.Printf("Warning: Qdrant search failed, falling back to MongoDB: %v\n", err)
 		}
 	}
 
@@ -178,7 +175,6 @@ func (s *MongoKnowledgeStorage) Query(collection, query string, limit int) ([]*Q
 
 	// If MongoDB text search returns no results, fallback to simple similarity
 	if len(entries) == 0 {
-		fmt.Printf("⚠ MongoDB text search returned 0 results, falling back to simple similarity matching\n")
 		return s.fallbackQuery(ctx, collection, query, limit)
 	}
 
@@ -191,7 +187,6 @@ func (s *MongoKnowledgeStorage) Query(collection, query string, limit int) ([]*Q
 		}
 	}
 
-	fmt.Printf("✓ MongoDB text search: Found %d results for query '%s' in collection '%s'\n", len(entries), query, collection)
 	return results, nil
 }
 
@@ -235,7 +230,6 @@ func (s *MongoKnowledgeStorage) fallbackQuery(ctx context.Context, collection, q
 		results = results[:limit]
 	}
 
-	fmt.Printf("✓ Simple similarity matching: Found %d results for query '%s' in collection '%s'\n", len(results), query, collection)
 	return results, nil
 }
 

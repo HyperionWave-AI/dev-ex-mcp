@@ -140,23 +140,13 @@ func (h *QdrantToolHandler) handleQdrantFind(args map[string]interface{}) (*mcp.
 
 	// Ensure collection exists (with 1536 dimensions for OpenAI embeddings)
 	if err := h.qdrantClient.EnsureCollection(collectionName, 1536); err != nil {
-		// Return empty JSON array instead of error for UI compatibility
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "[]"},
-			},
-		}, nil, nil
+		return createErrorResult(fmt.Sprintf("failed to ensure collection exists: %s", err.Error())), nil, nil
 	}
 
 	// Search for similar entries
 	results, err := h.qdrantClient.SearchSimilar(collectionName, query, limit)
 	if err != nil {
-		// Return empty JSON array instead of error for UI compatibility
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "[]"},
-			},
-		}, nil, nil
+		return createErrorResult(fmt.Sprintf("search failed: %s", err.Error())), nil, nil
 	}
 
 	// Convert results to JSON array for UI compatibility

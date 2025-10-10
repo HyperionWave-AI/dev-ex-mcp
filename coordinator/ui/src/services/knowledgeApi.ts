@@ -80,25 +80,6 @@ export const knowledgeApi = {
   },
 
   async listCollections(): Promise<{ collections: KnowledgeCollection[] }> {
-    const mcpResponse = await fetchWithAuth(`${API_BASE}/api/knowledge/collections`);
-
-    // Parse MCP resource format: { contents: [{ text: "JSON" }] }
-    if (mcpResponse.contents && mcpResponse.contents[0] && mcpResponse.contents[0].text) {
-      try {
-        const data = JSON.parse(mcpResponse.contents[0].text);
-        return {
-          collections: (data.collections || []).map((col: any) => ({
-            name: col.name,
-            count: col.hasData ? 1 : 0, // Simplified - we don't have actual counts in the resource
-            category: col.category
-          }))
-        };
-      } catch (error) {
-        console.error('[knowledgeApi] Failed to parse collections:', error);
-        return { collections: [] };
-      }
-    }
-
-    return { collections: [] };
+    return fetchWithAuth(`${API_BASE}/api/knowledge/collections`);
   }
 };

@@ -16,7 +16,7 @@ COPY . .
 # Expose HTTP bridge port
 EXPOSE 7095
 
-# Entrypoint script that builds MCP server and HTTP bridge on startup
+# Entrypoint script that builds MCP server on startup
 # This allows hot-reload from mounted source volume
 RUN echo '#!/bin/sh' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
@@ -25,16 +25,9 @@ RUN echo '#!/bin/sh' > /entrypoint.sh && \
     echo 'GOOS=linux GOARCH=amd64 go build -o /app/mcp-server/hyperion-coordinator-mcp .' >> /entrypoint.sh && \
     echo 'echo "MCP server built successfully at /app/mcp-server/hyperion-coordinator-mcp"' >> /entrypoint.sh && \
     echo 'ls -lh /app/mcp-server/hyperion-coordinator-mcp' >> /entrypoint.sh && \
-    echo 'echo "Building HTTP bridge..."' >> /entrypoint.sh && \
-    echo 'cd /app' >> /entrypoint.sh && \
-    echo 'mkdir -p /tmp/bridge-build' >> /entrypoint.sh && \
-    echo 'go build -o /tmp/bridge-build/main .' >> /entrypoint.sh && \
-    echo 'echo "HTTP bridge built successfully"' >> /entrypoint.sh && \
-    echo 'echo "Starting HTTP bridge with Air hot-reload..."' >> /entrypoint.sh && \
-    echo 'export MCP_SERVER_PATH=/app/mcp-server/hyperion-coordinator-mcp' >> /entrypoint.sh && \
-    echo 'export PORT=${PORT:-7095}' >> /entrypoint.sh && \
+    echo 'echo "Starting Air hot-reload..."' >> /entrypoint.sh && \
     echo 'exec air -c .air.toml' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
-# Run entrypoint that builds MCP server and bridge, then starts Air
+# Run entrypoint that builds MCP server then starts Air
 CMD ["/entrypoint.sh"]
