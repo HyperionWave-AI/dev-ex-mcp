@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"time"
 
@@ -66,6 +67,9 @@ func NewHTTPBridge(mcpServerPath string) (*HTTPBridge, error) {
 // start launches the MCP server process
 func (b *HTTPBridge) start() error {
 	b.cmd = exec.Command(b.mcpServerPath)
+
+	// Inherit environment variables from parent process
+	b.cmd.Env = os.Environ()
 
 	var err error
 	b.stdin, err = b.cmd.StdinPipe()
@@ -214,10 +218,16 @@ func (b *HTTPBridge) sendRequest(req MCPRequest) (map[string]interface{}, error)
 	}
 	b.mu.Unlock()
 
-	// Use longer timeout for initialization, shorter for regular requests
+	// Use longer timeout for initialization and embedding generation
 	timeout := 10 * time.Second
 	if req.Method == "initialize" {
 		timeout = 30 * time.Second // MongoDB connection can take time
+	}
+	// Increase timeout for qdrant_store (embedding generation is slow)
+	if req.Method == "tools/call" {
+		if toolName, ok := req.Params["name"].(string); ok && toolName == "qdrant_store" {
+			timeout = 30 * time.Second
+		}
 	}
 
 	// Wait for response
@@ -357,11 +367,17 @@ func (b *HTTPBridge) handleListCollections(c *gin.Context) {
 func (b *HTTPBridge) handleSearchKnowledge(c *gin.Context) {
 	collectionName := c.Query("collectionName")
 	query := c.Query("query")
-	limit := c.DefaultQuery("limit", "10")
+	limitStr := c.DefaultQuery("limit", "10")
 
 	if collectionName == "" || query == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "collectionName and query parameters required"})
 		return
+	}
+
+	// Convert limit to number
+	limitNum, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limitNum = 10
 	}
 
 	req := MCPRequest{
@@ -369,11 +385,11 @@ func (b *HTTPBridge) handleSearchKnowledge(c *gin.Context) {
 		ID:      c.GetHeader("X-Request-ID"),
 		Method:  "tools/call",
 		Params: map[string]interface{}{
-			"name": "coordinator_query_knowledge",
+			"name": "qdrant_find",
 			"arguments": map[string]interface{}{
-				"collection": collectionName,
-				"query":      query,
-				"limit":      limit,
+				"collectionName": collectionName,
+				"query":          query,
+				"limit":          limitNum,
 			},
 		},
 	}

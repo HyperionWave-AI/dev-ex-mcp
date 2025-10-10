@@ -13,7 +13,7 @@ import {
 import { Dashboard, Psychology, Refresh } from '@mui/icons-material';
 import { theme } from './theme';
 import { KanbanBoard } from './components/KanbanBoard';
-import { KnowledgeBrowser } from './components/KnowledgeBrowser';
+import { KnowledgePage } from './pages/KnowledgePage';
 
 type View = 'dashboard' | 'knowledge';
 
@@ -110,13 +110,15 @@ function App() {
           sx={{
             flexGrow: 1,
             backgroundColor: 'background.default',
-            py: 3,
+            py: currentView === 'knowledge' ? 0 : 3,
           }}
         >
-          <Container maxWidth="xl">
-            {currentView === 'dashboard' && <KanbanBoard key={refreshKey} />}
-            {currentView === 'knowledge' && <KnowledgeBrowser key={refreshKey} />}
-          </Container>
+          {currentView === 'dashboard' && (
+            <Container maxWidth="xl">
+              <KanbanBoard key={refreshKey} />
+            </Container>
+          )}
+          {currentView === 'knowledge' && <KnowledgePage key={refreshKey} />}
         </Box>
 
         {/* Footer */}
