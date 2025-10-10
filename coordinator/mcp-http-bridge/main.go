@@ -472,6 +472,7 @@ func main() {
 		"http://localhost:7780",     // Dev UI port (auto-assigned)
 		"http://localhost:9173",     // Custom UI port (via docker-compose.override.yml)
 		"http://localhost:3000",     // React dev server
+		"http://localhost:3001",     // React dev server (auto-assigned)
 		"http://localhost",          // Docker UI (mapped to host)
 		"http://hyperion-ui",        // Docker internal network
 		"http://hyperion-ui:80",     // Docker internal network with port
